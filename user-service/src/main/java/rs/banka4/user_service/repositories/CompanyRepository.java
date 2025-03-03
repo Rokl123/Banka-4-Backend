@@ -8,6 +8,7 @@ import java.util.UUID;
 
 @Repository
 public interface CompanyRepository extends JpaRepository<Company, UUID> {
-
+    boolean existsByTin(String s);
+    boolean existsByCrn(String crn);
 
 }
