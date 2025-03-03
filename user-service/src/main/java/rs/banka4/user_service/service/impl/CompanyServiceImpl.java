@@ -31,8 +31,6 @@ public class CompanyServiceImpl implements CompanyService {
 
         var comp = companyMapper.toEntity(dto);
 
-        System.out.println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + comp);
-
         companyRepository.save(comp);
 
         return  ResponseEntity.status(HttpStatus.CREATED).build();
@@ -41,5 +39,10 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public Optional<Company> getCompany(String id) {
         return companyRepository.findById(UUID.fromString(id));
+    }
+
+    @Override
+    public Optional<Company> getCompanyByCrn(String crn) {
+        return companyRepository.findByCrn(crn);
     }
 }

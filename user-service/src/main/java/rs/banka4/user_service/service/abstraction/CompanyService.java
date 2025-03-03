@@ -11,4 +11,6 @@ public interface CompanyService {
     ResponseEntity<Void> creteCompany(CreateCompanyDto dto);
 
     Optional<Company> getCompany(String id);
+
+    Optional<Company> getCompanyByCrn(String crn);
 }

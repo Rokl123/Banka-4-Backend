@@ -6,7 +6,7 @@ import java.util.Map;
 
 public class CompanyNotFound extends BaseApiException{
 
-    public CompanyNotFound(String companyId) {
-        super(HttpStatus.NOT_FOUND, Map.of("companyId",companyId));
+    public CompanyNotFound(String crn) {
+        super(HttpStatus.NOT_FOUND, Map.of("crn",crn));
     }
 }

@@ -30,6 +30,7 @@ import rs.banka4.user_service.utils.MessageHelper;
 import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -104,6 +105,11 @@ public class ClientServiceImpl implements ClientService {
                 List.of()
         );
         return ResponseEntity.ok(clientDto);
+    }
+
+    @Override
+    public Optional<Client> getClientByEmail(String email) {
+        return clientRepository.findByEmail(email);
     }
 
     @Override

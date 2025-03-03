@@ -1,6 +1,9 @@
 package rs.banka4.user_service.service.impl;
 
+import jakarta.transaction.Transactional;
+import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -11,15 +14,13 @@ import rs.banka4.user_service.dto.*;
 import rs.banka4.user_service.dto.requests.CreateAccountDto;
 import rs.banka4.user_service.dto.requests.CreateClientDto;
 import rs.banka4.user_service.dto.requests.CreateCompanyDto;
-import rs.banka4.user_service.exceptions.ClientNotFound;
-import rs.banka4.user_service.exceptions.CompanyNotFound;
-import rs.banka4.user_service.exceptions.EmployeeNotFound;
-import rs.banka4.user_service.exceptions.InvalidCurrency;
+import rs.banka4.user_service.exceptions.*;
 import rs.banka4.user_service.mapper.ClientMapper;
 import rs.banka4.user_service.mapper.CompanyMapper;
 import rs.banka4.user_service.mapper.EmployeeMapper;
 import rs.banka4.user_service.models.*;
 import rs.banka4.user_service.models.Currency;
+import rs.banka4.user_service.repositories.AccountRepository;
 import rs.banka4.user_service.repositories.CompanyRepository;
 import rs.banka4.user_service.repositories.CurrencyRepository;
 import rs.banka4.user_service.repositories.EmployeeRepository;
@@ -31,6 +32,7 @@ import rs.banka4.user_service.service.abstraction.EmployeeService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -50,14 +52,15 @@ public class AccountServiceImpl implements AccountService {
 
     private final EmployeeMapper employeeMapper;
 
+    private final AccountRepository accountRepository;
+
     CurrencyDto currencyDto = new CurrencyDto(
             "11111111-2222-3333-4444-555555555555",
             "Serbian Dinar",
             "RSD",
             "Currency used in Serbia",
             true,
-            Currency.Code.RSD,
-            Set.of("Serbia", "Montenegro")
+            Currency.Code.RSD
     );
 
     CompanyDto companyDto = new CompanyDto(
@@ -105,7 +108,6 @@ public class AccountServiceImpl implements AccountService {
     );
 
 
-
     @Override
     public ResponseEntity<List<AccountDto>> getAccountsForClient(String token) {
         List<AccountDto> accounts = List.of(account1, account2);
@@ -113,97 +115,148 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public ResponseEntity<AccountDto> getAccount(String token, String id){
+    public ResponseEntity<AccountDto> getAccount(String token, String id) {
         return ResponseEntity.ok(account1);
     }
 
-    private void checkCompany(Account account,CreateAccountDto createAccountDto){
+    private void checkCompany(Account account, CreateAccountDto createAccountDto) {
 
-        if(createAccountDto.company() != null && createAccountDto.company().id() == null){
-
+        if (createAccountDto.company() != null && createAccountDto.company().id() == null) {
 
             CreateCompanyDto createCompanyDto = companyMapper.toCreateDto(createAccountDto.company());
 
             companyService.creteCompany(createCompanyDto);
 
-            Company company = companyMapper.toEntity(createAccountDto.company());
+            Optional<Company> company = companyService.getCompanyByCrn(createCompanyDto.crn());
 
-            account.setCompany(company);
-        }
-        else if (createAccountDto.company() != null){
+            if (company.isPresent()) {
+                account.setCompany(company.get());
+            } else {
+                throw new CompanyNotFound(createAccountDto.company().crn());
+            }
+
+        } else if (createAccountDto.company() != null) {
+
             Optional<Company> company = companyService.getCompany(createAccountDto.company().id());
 
-            if(company.isPresent())
+            if (company.isPresent())
                 account.setCompany(company.get());
             else
-                throw new CompanyNotFound(createAccountDto.company().id());
+                throw new CompanyNotFound(createAccountDto.company().crn());
         }
 
     }
 
-    private void checkClient(Account account,CreateAccountDto createAccountDto){
-        if(createAccountDto.client().id() == null){
+    private void checkClient(Account account, CreateAccountDto createAccountDto) {
+
+        if (createAccountDto.client().id() == null) {
+
             CreateClientDto clientCreate = clientMapper.toCreateDto(createAccountDto.client());
 
             clientService.createClient(clientCreate);
 
-            Client client = clientMapper.toEntity(clientCreate);
+            Optional<Client> client = clientService.getClientByEmail(clientCreate.email());
 
-            account.setClient(client);
-        }else{
+            if(client.isPresent()){
+                account.setClient(client.get());
+            }else{
+                throw new ClientNotFound(null);
+            }
+
+            account.setClient(client.get());
+        } else {
+
             ClientDto clientDto = clientService.getClient(createAccountDto.client().id()).getBody();
 
-            if(clientDto == null){
+            if (clientDto == null) {
                 throw new ClientNotFound(createAccountDto.client().id());
             }
 
             CreateClientDto clientCreate = clientMapper.toCreateDto(clientDto);
 
-            Client client = clientMapper.toEntity(clientCreate);
+            Optional<Client> client = clientService.getClientByEmail(clientCreate.email());
 
-            account.setClient(client);
+            if(client.isPresent()) {
+                account.setClient(client.get());
+            }else{
+                throw new ClientNotFound(createAccountDto.client().id());
+            }
+
+            account.setClient(client.get());
         }
     }
 
-    private void checkCurrency(Account account,CreateAccountDto createAccountDto){
-            if(Arrays.stream(Currency.Code.values()).noneMatch(curr -> curr == createAccountDto.currency())){
-                throw new InvalidCurrency(createAccountDto.currency().toString());
-            }
+    private void checkCurrency(Account account, CreateAccountDto createAccountDto) {
+        Currency currency = currencyRepository.findByCode(createAccountDto.currency());
 
-            if (createAccountDto.currency().equals(Currency.Code.RSD))
-                account.setAccountType(AccountType.STANDARD);
-            else
-                account.setAccountType(AccountType.DOO);
+        if (currency == null)
+            throw new InvalidCurrency(createAccountDto.currency().toString());
 
-            Currency currency = currencyRepository.findByCode(createAccountDto.currency().toString());
 
-            account.setCurrency(currency);
+        if (createAccountDto.currency().equals(Currency.Code.RSD))
+            account.setAccountType(AccountType.STANDARD);
+        else
+            account.setAccountType(AccountType.DOO);
+
+
+        account.setCurrency(currency);
     }
 
-    private void checkEmployee(Account account,CreateAccountDto createAccountDto){
-        EmployeeResponseDto employeeResponseDto = employeeService.getMe(createAccountDto.createdByEmployeeId()).getBody();
+    private void checkEmployee(Account account, CreateAccountDto createAccountDto, String auth) {
+        EmployeeResponseDto employeeResponseDto = employeeService.getMe(auth).getBody();
 
-        if(employeeResponseDto == null)
+        if (employeeResponseDto == null)
             throw new EmployeeNotFound(createAccountDto.createdByEmployeeId());
-        else{
+        else {
             Employee employee = employeeMapper.toEntity(employeeResponseDto);
             account.setEmployee(employee);
         }
     }
 
+    private void makeAnAccountNumber(Currency.Code currency,Account account){
+
+        String accountNumber = "";
+
+        while(true) {
+            try {
+
+                long random = ThreadLocalRandom.current().nextLong(0,(long) 1e10-1);
+
+                accountNumber = String.format("4440001%09d", random);
+
+                if(currency.equals(Currency.Code.RSD))
+                    accountNumber+="10";
+                else
+                    accountNumber+="20";
+
+                account.setAccountNumber(accountNumber);
+
+                accountRepository.save(account);
+
+                break;
+
+            } catch (DataIntegrityViolationException ex) {
+                System.out.println("Account with this account number already exists!" + accountNumber);
+            }
+        }
+    }
+
+    @Transactional
     @Override
-    public ResponseEntity<Void> createAccount(CreateAccountDto createAccountDto) {
+    public ResponseEntity<Void> createAccount(CreateAccountDto createAccountDto, String auth) {
         Account account = new Account();
 
-        //checkClient(account,createAccountDto);
+        checkClient(account, createAccountDto);
 
         checkCompany(account, createAccountDto);
 
-        //checkCurrency(account,createAccountDto);
+        checkCurrency(account, createAccountDto);
 
-       // checkEmployee(account,createAccountDto);
+        checkEmployee(account, createAccountDto, auth);
 
         account.setAvailableBalance(createAccountDto.availableBalance());
+
+        makeAnAccountNumber(createAccountDto.currency(), account);
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
