@@ -1,6 +1,7 @@
 package rs.banka4.user_service.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.annotation.Nullable;
 import rs.banka4.user_service.models.Privilege;
 
 import java.time.LocalDate;

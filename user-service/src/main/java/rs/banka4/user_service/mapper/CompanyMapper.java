@@ -11,6 +11,7 @@ import rs.banka4.user_service.models.Company;
         unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface CompanyMapper {
     CompanyDto toDto(Company company);
+    CreateCompanyDto toCreateDto(CompanyDto companyDto);
     Company toEntity(CompanyDto dto);
     Company toEntity(CreateCompanyDto dto);
 }

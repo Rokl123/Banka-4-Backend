@@ -21,6 +21,9 @@ public interface ClientMapper {
     Client toEntity(CreateClientDto dto);
     @Mapping(target = "accounts",ignore = true)
     ClientDto toDto(Client client);
+
+    CreateClientDto toCreateDto(ClientDto dto);
+
     @AfterMapping
     default void mapPrivileges(CreateClientDto dto, @MappingTarget Client client) {
         client.setContacts(Set.of());
