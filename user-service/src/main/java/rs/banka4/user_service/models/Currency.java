@@ -38,12 +38,6 @@ public class Currency {
     @Enumerated(EnumType.STRING)
     private Code code;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "currency_countries", joinColumns = @JoinColumn(name = "currency_id"))
-    @Column(name = "country")
-    @Builder.Default
-    private Set<String> countries = new HashSet<>();
-
     public enum Code {
         RSD, EUR, USD, CHF, JPY, AUD, CAD
     }
