@@ -164,15 +164,16 @@ public class AccountServiceImpl implements AccountService {
             }
 
             account.setClient(client.get());
+
         } else {
 
-            ClientDto clientDto = clientService.getClient(createAccountDto.client().id()).getBody();
+            var clientDto = clientService.getClient(createAccountDto.client().id());
 
             if (clientDto == null) {
                 throw new ClientNotFound(createAccountDto.client().id());
             }
 
-            CreateClientDto clientCreate = clientMapper.toCreateDto(clientDto);
+            CreateClientDto clientCreate = clientMapper.toCreateDto(clientDto.getBody());
 
             Optional<Client> client = clientService.getClientByEmail(clientCreate.email());
 
