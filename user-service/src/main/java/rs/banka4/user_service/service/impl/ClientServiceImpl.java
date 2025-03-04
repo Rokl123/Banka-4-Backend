@@ -108,6 +108,14 @@ public class ClientServiceImpl implements ClientService {
     }
 
     @Override
+    public ClientDto findClient(String id) {
+        var c =clientRepository.findById(id);
+        if(c.isEmpty()) throw  new ClientNotFound(id);
+
+        return clientMapper.toDto(c.get());
+    }
+
+    @Override
     public Optional<Client> getClientByEmail(String email) {
         return clientRepository.findByEmail(email);
     }
@@ -127,6 +135,7 @@ public class ClientServiceImpl implements ClientService {
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
+
 
 
     @Override

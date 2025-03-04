@@ -167,13 +167,9 @@ public class AccountServiceImpl implements AccountService {
 
         } else {
 
-            var clientDto = clientService.getClient(createAccountDto.client().id());
+            var clientDto = clientService.findClient(createAccountDto.client().id());
 
-            if (clientDto == null) {
-                throw new ClientNotFound(createAccountDto.client().id());
-            }
-
-            CreateClientDto clientCreate = clientMapper.toCreateDto(clientDto.getBody());
+            CreateClientDto clientCreate = clientMapper.toCreateDto(clientDto);
 
             Optional<Client> client = clientService.getClientByEmail(clientCreate.email());
 
@@ -192,7 +188,6 @@ public class AccountServiceImpl implements AccountService {
 
         if (currency == null)
             throw new InvalidCurrency(createAccountDto.currency().toString());
-
 
         if (createAccountDto.currency().equals(Currency.Code.RSD))
             account.setAccountType(AccountType.STANDARD);

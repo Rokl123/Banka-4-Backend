@@ -119,7 +119,8 @@ public class AccountCreationTests {
 
     @Test
     public void shouldThrowExceptionWhenClientIdDoesNotExist() {
-        when(clientService.getClient(anyString())).thenReturn(null);
+        when(clientMapper.toCreateDto(any())).thenReturn(createClientDto);
+        when(clientService.getClientByEmail(anyString())).thenReturn(Optional.empty());
 
         assertThrows(ClientNotFound.class, () -> accountService.createAccount(createAccountDto,anyString()));
     }
@@ -155,7 +156,7 @@ public class AccountCreationTests {
         when(clientService.getClientByEmail(anyString()))
                 .thenReturn(Optional.of(newClient));
 
-        when(clientService.getClient(anyString())).thenReturn(ResponseEntity.ok(mockClient));
+        when(clientService.findClient(anyString())).thenReturn(mockClient);
 
         var newCompany = new Company();
         newCompany.setId(UUID.randomUUID());
@@ -230,6 +231,8 @@ public class AccountCreationTests {
 
     @Test
     void createAccount_ClientNotFound() {
+        when(clientMapper.toCreateDto(any())).thenReturn(createClientDto);
+
         when(clientService.getClientByEmail(anyString())).thenReturn(Optional.empty());
 
 
@@ -271,7 +274,7 @@ public class AccountCreationTests {
 
         when(clientService.getClientByEmail(anyString())).thenReturn(Optional.of(newClient));
 
-        when(clientService.getClient(anyString())).thenReturn(ResponseEntity.ok((mockClient)));
+        when(clientService.findClient(anyString())).thenReturn(mockClient);
 
 
 
@@ -302,7 +305,7 @@ public class AccountCreationTests {
         when(clientService.getClientByEmail(anyString()))
                 .thenReturn(Optional.of(newClient));
 
-        when(clientService.getClient(anyString())).thenReturn(ResponseEntity.ok(mockClient));
+        when(clientService.findClient(anyString())).thenReturn(mockClient);
 
 
         var newCompany = new Company();
@@ -345,7 +348,7 @@ public class AccountCreationTests {
         when(clientService.getClientByEmail(anyString()))
                 .thenReturn(Optional.of(newClient));
 
-        when(clientService.getClient(anyString())).thenReturn(ResponseEntity.ok(mockClient));
+        when(clientService.findClient(anyString())).thenReturn(mockClient);
 
 
         var newCompany = new Company();
@@ -394,7 +397,7 @@ public class AccountCreationTests {
         when(clientService.getClientByEmail(anyString()))
                 .thenReturn(Optional.of(newClient));
 
-        when(clientService.getClient(anyString())).thenReturn(ResponseEntity.ok(mockClient));
+        when(clientService.findClient(anyString())).thenReturn(mockClient);
 
 
         var newCompany = new Company();
@@ -486,7 +489,7 @@ public class AccountCreationTests {
         when(clientService.getClientByEmail(anyString()))
                 .thenReturn(Optional.of(newClient));
 
-        when(clientService.getClient(anyString())).thenReturn(ResponseEntity.ok(mockClient));
+        when(clientService.findClient(anyString())).thenReturn(mockClient);
 
 
 
