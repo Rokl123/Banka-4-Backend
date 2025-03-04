@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import rs.banka4.user_service.dto.requests.CreateCompanyDto;
+import rs.banka4.user_service.exceptions.DuplicateCompanyName;
 import rs.banka4.user_service.exceptions.DuplicateCrn;
 import rs.banka4.user_service.exceptions.DuplicateTin;
 import rs.banka4.user_service.mapper.CompanyMapper;
@@ -26,8 +27,10 @@ public class CompanyServiceImpl implements CompanyService {
 
         if(companyRepository.existsByCrn(dto.crn()))
             throw new DuplicateCrn(dto.crn());
-        if(companyRepository.existsByTin(dto.tin()))
+        else if(companyRepository.existsByTin(dto.tin()))
             throw new DuplicateTin(dto.tin());
+        else if(companyRepository.existsByName(dto.name()))
+            throw new DuplicateCompanyName(dto.name());
 
         var comp = companyMapper.toEntity(dto);
 
