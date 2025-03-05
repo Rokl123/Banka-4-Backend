@@ -51,6 +51,7 @@ public class ClientServiceCreateTests {
     @Test
     void shouldCreateClientSuccessfully() {
         CreateClientDto createClientDto = new CreateClientDto(
+                "212",
                 "John",
                 "Doe",
                 LocalDate.now(),
@@ -90,6 +91,7 @@ public class ClientServiceCreateTests {
     @Test
     void shouldThrowExceptionWhenEmailAlreadyExists() {
         CreateClientDto createClientDto = new CreateClientDto(
+                "123",
                 "John",
                 "Doe",
                 LocalDate.of(1990, 1, 1),

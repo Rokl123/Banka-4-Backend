@@ -75,21 +75,22 @@ public class AccountCreationTests {
 
     private ClientDto mockClient;
 
+    private CreateClientDto mockCreateClient;
+
     private CompanyDto mockCompany;
 
     private CreateClientDto createClientDto;
 
     @BeforeEach
     void setUp() {
-        mockClient = new ClientDto("12345", "John",
+        mockCreateClient = new CreateClientDto("12345", "John",
                 "Doe",
                 LocalDate.now(),
                 "Male",
                 "john.doe@example.com",
                 "12313",
                 "dasasd",
-                EnumSet.of(Privilege.SEARCH),
-                List.of());
+                EnumSet.of(Privilege.SEARCH));
 
         mockCompany = new CompanyDto(
                 "123123",
@@ -99,11 +100,11 @@ public class AccountCreationTests {
                 "123 Some Address"
         );
 
-        createAccountDto = new CreateAccountDto(mockClient,
+        createAccountDto = new CreateAccountDto(mockCreateClient,
                 mockCompany,new BigDecimal("153247.75") ,
-                Currency.Code.RSD , "123");
+                Currency.Code.RSD);
 
-         createClientDto = new CreateClientDto("John",
+         createClientDto = new CreateClientDto("123","John",
                 "Doe",
                 LocalDate.now(),
                 "Male",
@@ -127,7 +128,7 @@ public class AccountCreationTests {
 
     @Test
     void createAccount_Success_OldlientOldCompany_ValidCurrency() {
-        CreateClientDto createClientDto = new CreateClientDto("John",
+        CreateClientDto createClientDto = new CreateClientDto("123", "John",
                 "Doe",
                 LocalDate.now(),
                 "Male",
@@ -461,11 +462,11 @@ public class AccountCreationTests {
                 "123 Some Address"
         );
 
-        var createAccountDto = new CreateAccountDto(mockClient,
+        var createAccountDto = new CreateAccountDto(mockCreateClient,
                 mockCompany,new BigDecimal("153247.75") ,
-                Currency.Code.RSD , "123");
+                Currency.Code.RSD);
 
-        var createClientDto = new CreateClientDto("John",
+        var createClientDto = new CreateClientDto("123","John",
                 "Doe",
                 LocalDate.now(),
                 "Male",

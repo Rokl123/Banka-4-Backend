@@ -38,7 +38,7 @@ public class CompanyServiceImpl implements CompanyService {
 
         companyRepository.save(comp);
 
-        return  ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Override
