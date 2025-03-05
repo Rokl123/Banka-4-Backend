@@ -2,9 +2,7 @@ package rs.banka4.user_service.unit.company;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
-import org.mockito.junit.jupiter.MockitoExtension;
 import rs.banka4.user_service.dto.CompanyDto;
 import rs.banka4.user_service.dto.requests.CreateCompanyDto;
 import rs.banka4.user_service.exceptions.DuplicateCrn;
@@ -52,7 +50,7 @@ class CompanyServiceCreateTests {
 
         when(companyMapper.toEntity(dto)).thenReturn(companyEntity);
 
-        companyService.creteCompany(dto);
+        companyService.createCompany(dto, null);
 
         verify(companyRepository).existsByCrn(dto.crn());
         verify(companyRepository).existsByTin(dto.tin());
@@ -80,7 +78,7 @@ class CompanyServiceCreateTests {
 
         when(companyRepository.existsByCrn(dto.crn())).thenReturn(true);
 
-        assertThrows(DuplicateCrn.class, () -> companyService.creteCompany(dto));
+        assertThrows(DuplicateCrn.class, () -> companyService.createCompany(dto, null));
 
         verify(companyRepository, never()).existsByTin(anyString());
 
@@ -100,7 +98,7 @@ class CompanyServiceCreateTests {
         when(companyRepository.existsByCrn(dto.crn())).thenReturn(false);
         when(companyRepository.existsByTin(dto.tin())).thenReturn(true);
 
-        assertThrows(DuplicateTin.class, () -> companyService.creteCompany(dto));
+        assertThrows(DuplicateTin.class, () -> companyService.createCompany(dto, null));
 
         verify(companyRepository).existsByCrn(dto.crn());
         verify(companyRepository).existsByTin(dto.tin());

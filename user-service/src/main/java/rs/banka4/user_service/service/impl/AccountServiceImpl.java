@@ -1,7 +1,6 @@
 package rs.banka4.user_service.service.impl;
 
 import jakarta.transaction.Transactional;
-import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -12,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import rs.banka4.user_service.dto.*;
 import rs.banka4.user_service.dto.requests.CreateAccountDto;
-import rs.banka4.user_service.dto.requests.CreateClientDto;
 import rs.banka4.user_service.dto.requests.CreateCompanyDto;
 import rs.banka4.user_service.exceptions.*;
 import rs.banka4.user_service.mapper.ClientMapper;
@@ -20,14 +18,12 @@ import rs.banka4.user_service.mapper.CompanyMapper;
 import rs.banka4.user_service.mapper.EmployeeMapper;
 import rs.banka4.user_service.models.*;
 import rs.banka4.user_service.models.Currency;
-import rs.banka4.user_service.repositories.AccountRepository;
-import rs.banka4.user_service.repositories.CompanyRepository;
-import rs.banka4.user_service.repositories.CurrencyRepository;
-import rs.banka4.user_service.repositories.EmployeeRepository;
+import rs.banka4.user_service.repositories.*;
 import rs.banka4.user_service.service.abstraction.AccountService;
 import rs.banka4.user_service.service.abstraction.ClientService;
 import rs.banka4.user_service.service.abstraction.CompanyService;
 import rs.banka4.user_service.service.abstraction.EmployeeService;
+import rs.banka4.user_service.utils.JwtUtil;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -53,6 +49,9 @@ public class AccountServiceImpl implements AccountService {
     private final EmployeeMapper employeeMapper;
 
     private final AccountRepository accountRepository;
+    private final ClientRepository clientRepository;
+    private final JwtUtil jwtUtil;
+    private final EmployeeRepository employeeRepository;
 
     CurrencyDto currencyDto = new CurrencyDto(
             "11111111-2222-3333-4444-555555555555",
@@ -119,13 +118,13 @@ public class AccountServiceImpl implements AccountService {
         return ResponseEntity.ok(account1);
     }
 
-    private void checkCompany(Account account, CreateAccountDto createAccountDto) {
+    private void connectCompanyToAccount(Account account, CreateAccountDto createAccountDto) {
+        if (createAccountDto.company() == null) return;
 
-        if (createAccountDto.company() != null && createAccountDto.company().id() == null) {
+        if (createAccountDto.company().id() == null) {
 
             CreateCompanyDto createCompanyDto = companyMapper.toCreateDto(createAccountDto.company());
-
-            companyService.creteCompany(createCompanyDto);
+            companyService.createCompany(createCompanyDto, account.getClient());
 
             Optional<Company> company = companyService.getCompanyByCrn(createCompanyDto.crn());
 
@@ -135,8 +134,7 @@ public class AccountServiceImpl implements AccountService {
                 throw new CompanyNotFound(createAccountDto.company().crn());
             }
 
-        } else if (createAccountDto.company() != null) {
-
+        } else {
             Optional<Company> company = companyService.getCompany(createAccountDto.company().id());
 
             if (company.isPresent())
@@ -145,67 +143,53 @@ public class AccountServiceImpl implements AccountService {
                 throw new CompanyNotFound(createAccountDto.company().crn());
         }
 
+        account.setAccountType(AccountType.DOO);
     }
 
-    private void checkClient(Account account, CreateAccountDto createAccountDto) {
+    private void connectClientToAccount(Account account, CreateAccountDto createAccountDto) {
 
         if (createAccountDto.client().id() == null) {
+            clientService.createClient(createAccountDto.client());
+            Optional<Client> client = clientService.getClientByEmail(createAccountDto.client().email());
 
-            CreateClientDto clientCreate = clientMapper.toCreateDto(createAccountDto.client());
-
-            clientService.createClient(clientCreate);
-
-            Optional<Client> client = clientService.getClientByEmail(clientCreate.email());
-
-            if(client.isPresent()){
+            if (client.isPresent()) {
                 account.setClient(client.get());
-            }else{
+            } else {
                 throw new ClientNotFound(null);
             }
 
             account.setClient(client.get());
-
         } else {
 
-            var clientDto = clientService.findClient(createAccountDto.client().id());
+            Optional<Client> client = clientRepository.findById(createAccountDto.client().id());
 
-            CreateClientDto clientCreate = clientMapper.toCreateDto(clientDto);
-
-            Optional<Client> client = clientService.getClientByEmail(clientCreate.email());
-
-            if(client.isPresent()) {
+            if (client.isPresent()) {
                 account.setClient(client.get());
-            }else{
+            } else {
                 throw new ClientNotFound(createAccountDto.client().id());
             }
-
-            account.setClient(client.get());
         }
     }
 
-    private void checkCurrency(Account account, CreateAccountDto createAccountDto) {
+    private void connectCurrencyToAccount(Account account, CreateAccountDto createAccountDto) {
         Currency currency = currencyRepository.findByCode(createAccountDto.currency());
 
         if (currency == null)
             throw new InvalidCurrency(createAccountDto.currency().toString());
 
-        if (createAccountDto.currency().equals(Currency.Code.RSD))
-            account.setAccountType(AccountType.STANDARD);
-        else
-            account.setAccountType(AccountType.DOO);
-
-
         account.setCurrency(currency);
+        account.setAccountMaintenance();
     }
 
-    private void checkEmployee(Account account, CreateAccountDto createAccountDto, String auth) {
-        EmployeeResponseDto employeeResponseDto = employeeService.getMe(auth).getBody();
+    private void connectEmployeeToAccount(Account account, String auth) {
+        String username = jwtUtil.extractUsername(auth);
+        Optional<Employee> employee = employeeRepository.findByEmail(username);
 
-        if (employeeResponseDto == null)
-            throw new EmployeeNotFound(createAccountDto.createdByEmployeeId());
+        if (employee.isEmpty()) {
+            throw new EmployeeNotFound(username);
+        }
         else {
-            Employee employee = employeeMapper.toEntity(employeeResponseDto);
-            account.setEmployee(employee);
+            account.setEmployee(employee.get());
         }
     }
 
@@ -242,16 +226,18 @@ public class AccountServiceImpl implements AccountService {
     public ResponseEntity<Void> createAccount(CreateAccountDto createAccountDto, String auth) {
         Account account = new Account();
 
-        checkClient(account, createAccountDto);
+        connectClientToAccount(account, createAccountDto);
 
-        checkCompany(account, createAccountDto);
+        if (createAccountDto.company() != null) {
+            connectCompanyToAccount(account, createAccountDto);
+        } else {
+            account.setAccountType(AccountType.STANDARD);
+        }
 
-        checkCurrency(account, createAccountDto);
-
-        checkEmployee(account, createAccountDto, auth);
-
+        connectCurrencyToAccount(account, createAccountDto);
+        connectEmployeeToAccount(account, auth);
         account.setAvailableBalance(createAccountDto.availableBalance());
-
+        account.setBalance(createAccountDto.availableBalance());
         makeAnAccountNumber(createAccountDto.currency(), account);
 
         return ResponseEntity.status(HttpStatus.CREATED).build();

@@ -10,6 +10,7 @@ import rs.banka4.user_service.exceptions.DuplicateCompanyName;
 import rs.banka4.user_service.exceptions.DuplicateCrn;
 import rs.banka4.user_service.exceptions.DuplicateTin;
 import rs.banka4.user_service.mapper.CompanyMapper;
+import rs.banka4.user_service.models.Client;
 import rs.banka4.user_service.models.Company;
 import rs.banka4.user_service.repositories.CompanyRepository;
 import rs.banka4.user_service.service.abstraction.CompanyService;
@@ -23,7 +24,7 @@ public class CompanyServiceImpl implements CompanyService {
     private final CompanyMapper companyMapper;
     private final CompanyRepository companyRepository;
     @Override
-    public ResponseEntity<Void> creteCompany(@Valid CreateCompanyDto dto) {
+    public ResponseEntity<Void> createCompany(@Valid CreateCompanyDto dto, Client client) {
 
         if(companyRepository.existsByCrn(dto.crn()))
             throw new DuplicateCrn(dto.crn());
@@ -33,6 +34,7 @@ public class CompanyServiceImpl implements CompanyService {
             throw new DuplicateCompanyName(dto.name());
 
         var comp = companyMapper.toEntity(dto);
+        comp.setMajorityOwner(client);
 
         companyRepository.save(comp);
 

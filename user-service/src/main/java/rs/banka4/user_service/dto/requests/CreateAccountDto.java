@@ -17,7 +17,7 @@ import java.util.UUID;
 public record CreateAccountDto (
 
         @Schema(description = "Client associated with the account")
-        ClientDto client,
+        CreateClientDto client,
 
         @Nullable
         @Schema(description = "Company associated with the account")
@@ -30,5 +30,4 @@ public record CreateAccountDto (
         @NotNull(message = "Currency ID cannot be null")
         @Schema(description = "Currency ID associated with this account", example = "RSD")
         Currency.Code currency
-
 ) { }

@@ -7,12 +7,18 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import rs.banka4.user_service.models.Privilege;
 
+import javax.annotation.Nullable;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
 @Schema(description = "DTO for creating Client")
 public record CreateClientDto(
+
+        @Schema(description = "Client ID", example = "1fad2c01-f82f-41a6-822c-8ca1b3232575")
+        @Nullable
+        String id,
+
         @Schema(description = "Client's first name", example = "Ognjen")
         @NotBlank(message = "First name is required")
         String firstName,
@@ -25,7 +31,7 @@ public record CreateClientDto(
         @NotNull(message = "Date of birth is required")
         LocalDate dateOfBirth,
 
-        @Schema(description = "Client's gender", example = "man")
+        @Schema(description = "Client's gender (Male or Female)", example = "Male")
         @NotBlank(message = "Gender is required")
         String gender,
 
