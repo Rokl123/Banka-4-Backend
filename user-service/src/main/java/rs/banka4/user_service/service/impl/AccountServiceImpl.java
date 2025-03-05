@@ -13,16 +13,13 @@ import rs.banka4.user_service.dto.*;
 import rs.banka4.user_service.dto.requests.CreateAccountDto;
 import rs.banka4.user_service.dto.requests.CreateCompanyDto;
 import rs.banka4.user_service.exceptions.*;
-import rs.banka4.user_service.mapper.ClientMapper;
 import rs.banka4.user_service.mapper.CompanyMapper;
-import rs.banka4.user_service.mapper.EmployeeMapper;
 import rs.banka4.user_service.models.*;
 import rs.banka4.user_service.models.Currency;
 import rs.banka4.user_service.repositories.*;
 import rs.banka4.user_service.service.abstraction.AccountService;
 import rs.banka4.user_service.service.abstraction.ClientService;
 import rs.banka4.user_service.service.abstraction.CompanyService;
-import rs.banka4.user_service.service.abstraction.EmployeeService;
 import rs.banka4.user_service.utils.JwtUtil;
 
 import java.math.BigDecimal;
@@ -38,15 +35,9 @@ public class AccountServiceImpl implements AccountService {
 
     private final CompanyService companyService;
 
-    private final ClientMapper clientMapper;
-
     private final CurrencyRepository currencyRepository;
 
     private final CompanyMapper companyMapper;
-
-    private final EmployeeService employeeService;
-
-    private final EmployeeMapper employeeMapper;
 
     private final AccountRepository accountRepository;
     private final ClientRepository clientRepository;
