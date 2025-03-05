@@ -29,9 +29,6 @@ public record CreateAccountDto (
 
         @NotNull(message = "Currency ID cannot be null")
         @Schema(description = "Currency ID associated with this account", example = "RSD")
-        Currency.Code currency,
-
-        @Schema(description = "Employee that created this account")
-        String createdByEmployeeId
+        Currency.Code currency
 
 ) { }
