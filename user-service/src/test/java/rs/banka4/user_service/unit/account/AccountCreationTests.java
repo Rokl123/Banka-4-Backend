@@ -26,12 +26,15 @@ import rs.banka4.user_service.mapper.EmployeeMapper;
 import rs.banka4.user_service.models.*;
 import rs.banka4.user_service.models.Currency;
 import rs.banka4.user_service.repositories.AccountRepository;
+import rs.banka4.user_service.repositories.ClientRepository;
 import rs.banka4.user_service.repositories.CurrencyRepository;
+import rs.banka4.user_service.repositories.EmployeeRepository;
 import rs.banka4.user_service.service.abstraction.AccountService;
 import rs.banka4.user_service.service.abstraction.ClientService;
 import rs.banka4.user_service.service.abstraction.CompanyService;
 import rs.banka4.user_service.service.abstraction.EmployeeService;
 import rs.banka4.user_service.service.impl.AccountServiceImpl;
+import rs.banka4.user_service.utils.JwtUtil;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -67,7 +70,12 @@ public class AccountCreationTests {
 
     @Mock
     private EmployeeMapper employeeMapper;
-
+    @Mock
+    private JwtUtil jwtUtil;
+    @Mock
+    private ClientRepository clientRepository;
+    @Mock
+    private EmployeeRepository employeeRepository;
     @InjectMocks
     private AccountServiceImpl accountService;
 
@@ -80,6 +88,7 @@ public class AccountCreationTests {
     private CompanyDto mockCompany;
 
     private CreateClientDto createClientDto;
+
 
     @BeforeEach
     void setUp() {
@@ -121,13 +130,13 @@ public class AccountCreationTests {
     @Test
     public void shouldThrowExceptionWhenClientIdDoesNotExist() {
         when(clientMapper.toCreateDto(any())).thenReturn(createClientDto);
-        when(clientService.getClientByEmail(anyString())).thenReturn(Optional.empty());
+        when(clientRepository.findById(anyString())).thenReturn(Optional.empty());
 
         assertThrows(ClientNotFound.class, () -> accountService.createAccount(createAccountDto,anyString()));
     }
 
     @Test
-    void createAccount_Success_OldlientOldCompany_ValidCurrency() {
+    void createAccount_Success_OldClientOldCompany_ValidCurrency() {
         CreateClientDto createClientDto = new CreateClientDto("123", "John",
                 "Doe",
                 LocalDate.now(),
@@ -154,10 +163,9 @@ public class AccountCreationTests {
         var newClient = new Client();
         newClient.setId("clientIdXYZ");
         newClient.setEmail("jane.doe@example.com");
-        when(clientService.getClientByEmail(anyString()))
+        when(clientRepository.findById(anyString()))
                 .thenReturn(Optional.of(newClient));
 
-        when(clientService.findClient(anyString())).thenReturn(mockClient);
 
         var newCompany = new Company();
         newCompany.setId(UUID.randomUUID());
@@ -174,18 +182,11 @@ public class AccountCreationTests {
         when(currencyRepository.findByCode(Currency.Code.RSD)).thenReturn(currency);
 
 
-        EmployeeResponseDto employeeResp = new EmployeeResponseDto(
-                "empId","John","Smith",LocalDate.of(1985,5,20),
-                "Male","john.smith@example.com","555-4321","Employee Address",
-                null,"username","IT",EnumSet.of(Privilege.SEARCH),true
-        );
-
-        when(employeeService.getMe("employeeId")).thenReturn(ResponseEntity.ok(employeeResp));
-
         var employeeEntity = new Employee();
         employeeEntity.setId("empId");
         employeeEntity.setEmail("john.smith@example.com");
-        when(employeeMapper.toEntity(employeeResp)).thenReturn(employeeEntity);
+        when(jwtUtil.extractUsername("jwt")).thenReturn(employeeEntity.email);
+        when(employeeRepository.findByEmail(employeeEntity.email)).thenReturn(Optional.of(employeeEntity));
 
 
         when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> {
@@ -195,7 +196,7 @@ public class AccountCreationTests {
         });
 
 
-        ResponseEntity<Void> response = accountService.createAccount(createAccountDto, "employeeId");
+        ResponseEntity<Void> response = accountService.createAccount(createAccountDto, "jwt");
 
 
         assertEquals(201, response.getStatusCodeValue());
@@ -215,7 +216,7 @@ public class AccountCreationTests {
 
 
         assertEquals(Currency.Code.RSD, savedAcc.getCurrency().getCode());
-        assertEquals(AccountType.STANDARD, savedAcc.getAccountType());
+        assertEquals(AccountType.DOO, savedAcc.getAccountType());
 
 
         assertEquals(BigDecimal.valueOf(153247.75), savedAcc.getAvailableBalance());
@@ -232,9 +233,14 @@ public class AccountCreationTests {
 
     @Test
     void createAccount_ClientNotFound() {
-        when(clientMapper.toCreateDto(any())).thenReturn(createClientDto);
+        var employeeEntity = new Employee();
+        employeeEntity.setId("empId");
+        employeeEntity.setEmail("john.smith@example.com");
+        when(jwtUtil.extractUsername("jwt")).thenReturn(employeeEntity.email);
+        when(employeeRepository.findByEmail(employeeEntity.email)).thenReturn(Optional.of(employeeEntity));
 
-        when(clientService.getClientByEmail(anyString())).thenReturn(Optional.empty());
+        when(clientRepository.findById(anyString()))
+                .thenReturn(Optional.empty());
 
 
         when(currencyRepository.findByCode(createAccountDto.currency())).thenReturn(new Currency());
@@ -253,30 +259,22 @@ public class AccountCreationTests {
 
     @Test
     void createAccount_CompanyNotFound() {
+        var employeeEntity = new Employee();
+        employeeEntity.setId("empId");
+        employeeEntity.setEmail("john.smith@example.com");
+        when(jwtUtil.extractUsername("jwt")).thenReturn(employeeEntity.email);
+        when(employeeRepository.findByEmail(employeeEntity.email)).thenReturn(Optional.of(employeeEntity));
+
+        var newClient = new Client();
+        newClient.setId("clientIdXYZ");
+        newClient.setEmail("jane.doe@example.com");
+        when(clientRepository.findById(anyString()))
+                .thenReturn(Optional.of(newClient));
+
         when(companyService.getCompanyByCrn(anyString())).thenReturn(Optional.empty());
 
 
         when(currencyRepository.findByCode(createAccountDto.currency())).thenReturn(new Currency());
-        EmployeeResponseDto empResp = new EmployeeResponseDto(
-                "empId","John","Smith",LocalDate.of(1985,5,20),
-                "Male","john.smith@example.com","555-4321","Employee Address",
-                null,"username","IT",EnumSet.of(Privilege.SEARCH),true
-        );
-        when(employeeService.getMe(anyString())).thenReturn(ResponseEntity.ok(empResp));
-
-        when(employeeMapper.toEntity(empResp)).thenReturn(new Employee());
-
-
-        var newClient = new Client();
-        newClient.setId("someClientId");
-        newClient.setEmail("john.smith@example.com");
-
-        when(clientMapper.toCreateDto(any(ClientDto.class))).thenReturn(createClientDto);
-
-        when(clientService.getClientByEmail(anyString())).thenReturn(Optional.of(newClient));
-
-        when(clientService.findClient(anyString())).thenReturn(mockClient);
-
 
 
 
@@ -287,9 +285,17 @@ public class AccountCreationTests {
     @Test
     void createAccount_InvalidCurrency() {
 
+        var employeeEntity = new Employee();
+        employeeEntity.setId("empId");
+        employeeEntity.setEmail("john.smith@example.com");
+        when(jwtUtil.extractUsername("jwt")).thenReturn(employeeEntity.email);
+        when(employeeRepository.findByEmail(employeeEntity.email)).thenReturn(Optional.of(employeeEntity));
 
-        when(clientMapper.toCreateDto(mockClient)).thenReturn(createClientDto);
-
+        var newClient = new Client();
+        newClient.setId("clientIdXYZ");
+        newClient.setEmail("jane.doe@example.com");
+        when(clientRepository.findById(anyString()))
+                .thenReturn(Optional.of(newClient));
 
         CreateCompanyDto createCompanyDto = new CreateCompanyDto(
                 "Acme Corp",
@@ -300,15 +306,6 @@ public class AccountCreationTests {
         when(companyMapper.toCreateDto(mockCompany)).thenReturn(createCompanyDto);
 
 
-        var newClient = new Client();
-        newClient.setId("clientIdXYZ");
-        newClient.setEmail("jane.doe@example.com");
-        when(clientService.getClientByEmail(anyString()))
-                .thenReturn(Optional.of(newClient));
-
-        when(clientService.findClient(anyString())).thenReturn(mockClient);
-
-
         var newCompany = new Company();
         newCompany.setId(UUID.randomUUID());
         newCompany.setName("Acme Corp");
@@ -317,7 +314,6 @@ public class AccountCreationTests {
         when(companyService.getCompanyByCrn(anyString())).thenReturn(Optional.of(newCompany));
 
         when(companyService.getCompany(anyString())).thenReturn(Optional.of(newCompany));
-
 
 
         when(currencyRepository.findByCode(createAccountDto.currency())).thenReturn(null);
@@ -329,10 +325,17 @@ public class AccountCreationTests {
 
     @Test
     void createAccount_EmployeeNotFound() {
+        var employeeEntity = new Employee();
+        employeeEntity.setId("empId");
+        employeeEntity.setEmail("john.smith@example.com");
+        when(jwtUtil.extractUsername("jwt")).thenReturn(employeeEntity.email);
+        when(employeeRepository.findByEmail(employeeEntity.email)).thenReturn(Optional.empty());
 
-
-        when(clientMapper.toCreateDto(mockClient)).thenReturn(createClientDto);
-
+        var newClient = new Client();
+        newClient.setId("clientIdXYZ");
+        newClient.setEmail("jane.doe@example.com");
+        when(clientRepository.findById(anyString()))
+                .thenReturn(Optional.of(newClient));
 
         CreateCompanyDto createCompanyDto = new CreateCompanyDto(
                 "Acme Corp",
@@ -341,16 +344,6 @@ public class AccountCreationTests {
                 "123 Some Address");
 
         when(companyMapper.toCreateDto(mockCompany)).thenReturn(createCompanyDto);
-
-
-        var newClient = new Client();
-        newClient.setId("clientIdXYZ");
-        newClient.setEmail("jane.doe@example.com");
-        when(clientService.getClientByEmail(anyString()))
-                .thenReturn(Optional.of(newClient));
-
-        when(clientService.findClient(anyString())).thenReturn(mockClient);
-
 
         var newCompany = new Company();
         newCompany.setId(UUID.randomUUID());
@@ -362,26 +355,29 @@ public class AccountCreationTests {
         when(companyService.getCompany(anyString())).thenReturn(Optional.of(newCompany));
 
 
-
-        when(employeeService.getMe(anyString())).thenReturn(ResponseEntity.of(Optional.empty()));
-
-
         when(currencyRepository.findByCode(createAccountDto.currency())).thenReturn(new Currency());
-
-        when(clientService.getClientByEmail(anyString())).thenReturn(Optional.of(new Client()));
 
         when(companyService.getCompanyByCrn(anyString())).thenReturn(Optional.of(new Company()));
 
 
-        assertThrows(EmployeeNotFound.class, () -> accountService.createAccount(createAccountDto, "authToken"));
+        assertThrows(EmployeeNotFound.class, () -> accountService.createAccount(createAccountDto, "jwt"));
     }
 
 
     @Test
     void createAccount_DataIntegrity_SuccessAfterRetry() {
 
-        when(clientMapper.toCreateDto(mockClient)).thenReturn(createClientDto);
+        var employeeEntity = new Employee();
+        employeeEntity.setId("empId");
+        employeeEntity.setEmail("john.smith@example.com");
+        when(jwtUtil.extractUsername("jwt")).thenReturn(employeeEntity.email);
+        when(employeeRepository.findByEmail(employeeEntity.email)).thenReturn(Optional.of(employeeEntity));
 
+        var newClient = new Client();
+        newClient.setId("clientIdXYZ");
+        newClient.setEmail("jane.doe@example.com");
+        when(clientRepository.findById(anyString()))
+                .thenReturn(Optional.of(newClient));
 
         CreateCompanyDto createCompanyDto = new CreateCompanyDto(
                 "Acme Corp",
@@ -392,31 +388,14 @@ public class AccountCreationTests {
         when(companyMapper.toCreateDto(mockCompany)).thenReturn(createCompanyDto);
 
 
-        var newClient = new Client();
-        newClient.setId("clientIdXYZ");
-        newClient.setEmail("jane.doe@example.com");
-        when(clientService.getClientByEmail(anyString()))
-                .thenReturn(Optional.of(newClient));
-
-        when(clientService.findClient(anyString())).thenReturn(mockClient);
-
-
         var newCompany = new Company();
         newCompany.setId(UUID.randomUUID());
         newCompany.setName("Acme Corp");
         newCompany.setTin("123456789");
         newCompany.setCrn("987654321");
         when(companyService.getCompanyByCrn(anyString())).thenReturn(Optional.of(newCompany));
-
         when(companyService.getCompany(anyString())).thenReturn(Optional.of(newCompany));
         when(currencyRepository.findByCode(createAccountDto.currency())).thenReturn(new Currency());
-        when(employeeService.getMe(anyString())).thenReturn(ResponseEntity.ok(new EmployeeResponseDto(
-                "empId","John","Smith",LocalDate.of(1985,5,20),
-                "Male","john.smith@example.com","555-4321","Employee Address",
-                null,"username","IT",EnumSet.of(Privilege.SEARCH),true
-        )));
-        when(employeeMapper.toEntity(any(EmployeeResponseDto.class))).thenReturn(new Employee());
-        when(clientService.getClientByEmail(anyString())).thenReturn(Optional.of(new Client()));
         when(companyService.getCompanyByCrn(anyString())).thenReturn(Optional.of(new Company()));
 
 
@@ -433,7 +412,7 @@ public class AccountCreationTests {
         });
 
 
-        ResponseEntity<Void> response = accountService.createAccount(createAccountDto, "authToken");
+        ResponseEntity<Void> response = accountService.createAccount(createAccountDto, "jwt");
 
 
         assertEquals(HttpStatusCode.valueOf(201), response.getStatusCode());
@@ -444,15 +423,6 @@ public class AccountCreationTests {
 
     @Test
     void createAccount_Success_NewClientNewCompany_ValidCurrency() {
-        var mockClient = new ClientDto(null, "John",
-                "Doe",
-                LocalDate.now(),
-                "Male",
-                "john.doe@example.com",
-                "12313",
-                "dasasd",
-                EnumSet.of(Privilege.SEARCH),
-                List.of());
 
         var mockCompany = new CompanyDto(
                 null,
@@ -490,8 +460,14 @@ public class AccountCreationTests {
         when(clientService.getClientByEmail(anyString()))
                 .thenReturn(Optional.of(newClient));
 
-        when(clientService.findClient(anyString())).thenReturn(mockClient);
+        when(clientRepository.findById(anyString())).thenReturn(Optional.of(newClient));
 
+
+        var employeeEntity = new Employee();
+        employeeEntity.setId("empId");
+        employeeEntity.setEmail("john.smith@example.com");
+        when(jwtUtil.extractUsername("jwt")).thenReturn(employeeEntity.email);
+        when(employeeRepository.findByEmail(employeeEntity.email)).thenReturn(Optional.of(employeeEntity));
 
 
         when(companyMapper.toCreateDto(any(CompanyDto.class))).thenReturn(createCompanyDto);
@@ -511,20 +487,6 @@ public class AccountCreationTests {
         when(currencyRepository.findByCode(Currency.Code.RSD)).thenReturn(currency);
 
 
-        EmployeeResponseDto employeeResp = new EmployeeResponseDto(
-                "empId","John","Smith",LocalDate.of(1985,5,20),
-                "Male","john.smith@example.com","555-4321","Employee Address",
-                null,"username","IT",EnumSet.of(Privilege.SEARCH),true
-        );
-
-        when(employeeService.getMe("employeeId")).thenReturn(ResponseEntity.ok(employeeResp));
-
-
-        var employeeEntity = new Employee();
-        employeeEntity.setId("empId");
-        employeeEntity.setEmail("john.smith@example.com");
-        when(employeeMapper.toEntity(employeeResp)).thenReturn(employeeEntity);
-
 
         when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> {
             Account saved = invocation.getArgument(0);
@@ -533,7 +495,7 @@ public class AccountCreationTests {
         });
 
 
-        ResponseEntity<Void> response = accountService.createAccount(createAccountDto, "employeeId");
+        ResponseEntity<Void> response = accountService.createAccount(createAccountDto, "jwt");
         
         assertEquals(201, response.getStatusCodeValue());
 
@@ -552,7 +514,7 @@ public class AccountCreationTests {
 
 
         assertEquals(Currency.Code.RSD, savedAcc.getCurrency().getCode());
-        assertEquals(AccountType.STANDARD, savedAcc.getAccountType());
+        assertEquals(AccountType.DOO, savedAcc.getAccountType());
 
 
         assertEquals(BigDecimal.valueOf(153247.75), savedAcc.getAvailableBalance());
