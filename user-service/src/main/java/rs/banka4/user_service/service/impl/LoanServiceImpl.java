@@ -51,7 +51,6 @@ import java.util.stream.Stream;
 @Service
 @Primary
 public class LoanServiceImpl implements LoanService {
-    private final LoanRateUtil loanRateUtil;
 
     private final ClientService clientService;
 
@@ -60,6 +59,8 @@ public class LoanServiceImpl implements LoanService {
     private final LoanRateUtil loanRateUtil;
 
     private final LoanRepository loanRepository;
+
+    private final InterestRateRepository interestRateRepository;
 
     private final JwtUtil jwtUtil;
 
