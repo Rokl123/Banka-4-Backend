@@ -12,17 +12,19 @@ import org.springframework.stereotype.Service;
 import rs.banka4.user_service.domain.loan.db.LoanStatus;
 import rs.banka4.user_service.domain.loan.db.Loan;
 import rs.banka4.user_service.domain.account.db.Account;
+import rs.banka4.user_service.domain.account.dtos.AccountDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanApplicationDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanFilterDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanInformationDto;
 import rs.banka4.user_service.domain.user.client.db.Client;
 import rs.banka4.user_service.exceptions.NullPageRequest;
 import rs.banka4.user_service.repositories.LoanRepository;
+import rs.banka4.user_service.utils.loans.LoanRateUtil;
 import rs.banka4.user_service.domain.loan.mapper.LoanMapper;
 import rs.banka4.user_service.exceptions.account.AccountNotActive;
 import rs.banka4.user_service.exceptions.account.AccountNotFound;
-import rs.banka4.user_service.exceptions.loan.NoLoansOnAccount;
 import rs.banka4.user_service.exceptions.user.NotFound;
+import rs.banka4.user_service.exceptions.user.client.ClientNotFound;
 import rs.banka4.user_service.service.abstraction.AccountService;
 import rs.banka4.user_service.service.abstraction.ClientService;
 import rs.banka4.user_service.exceptions.jwt.Unauthorized;
@@ -32,6 +34,7 @@ import rs.banka4.user_service.domain.loan.specification.LoanSpecification;
 import rs.banka4.user_service.service.abstraction.LoanService;
 import rs.banka4.user_service.utils.JwtUtil;
 import rs.banka4.user_service.utils.specification.SpecificationCombinator;
+
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -48,6 +51,7 @@ public class LoanServiceImpl implements LoanService {
 
     private final AccountService accountService;
 
+    private final LoanRateUtil loanRateUtil;
     private final LoanRepository loanRepository;
 
     private final JwtUtil jwtUtil;
@@ -78,7 +82,6 @@ public class LoanServiceImpl implements LoanService {
 
         generateLoanNumber(newLoan);
     }
-
 
     @Override
     public ResponseEntity<Page<LoanInformationDto>> getAllLoans(PageRequest pageRequest, LoanFilterDto filterDto) {
@@ -191,7 +194,7 @@ public class LoanServiceImpl implements LoanService {
         }
     }
 
-    private void generateAccountNumber(Loan newLoan){
+    private void generateLoanNumber(Loan newLoan){
         String comb;
 
         LocalDate dayOfLoanRequest = LocalDate.now();
