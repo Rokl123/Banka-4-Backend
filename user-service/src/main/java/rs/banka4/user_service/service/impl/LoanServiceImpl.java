@@ -18,8 +18,6 @@ import rs.banka4.user_service.domain.account.dtos.AccountDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanApplicationDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanFilterDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanInformationDto;
-import rs.banka4.user_service.repositories.LoanRepository;
-import rs.banka4.user_service.utils.loans.LoanRateUtil;
 import rs.banka4.user_service.domain.loan.mapper.LoanMapper;
 import rs.banka4.user_service.domain.user.client.db.Client;
 import rs.banka4.user_service.exceptions.NullPageRequest;
@@ -27,9 +25,11 @@ import rs.banka4.user_service.exceptions.account.AccountNotActive;
 import rs.banka4.user_service.exceptions.account.NotAccountOwner;
 import rs.banka4.user_service.exceptions.user.client.ClientNotFound;
 import rs.banka4.user_service.repositories.InterestRateRepository;
+import rs.banka4.user_service.repositories.LoanRepository;
 import rs.banka4.user_service.service.abstraction.AccountService;
 import rs.banka4.user_service.service.abstraction.ClientService;
 import rs.banka4.user_service.utils.loans.LoanRateScheduler;
+import rs.banka4.user_service.utils.loans.LoanRateUtil;
 import rs.banka4.user_service.exceptions.jwt.Unauthorized;
 import rs.banka4.user_service.exceptions.loan.InvalidLoanStatus;
 import rs.banka4.user_service.exceptions.loan.LoanNotFound;
@@ -38,7 +38,6 @@ import rs.banka4.user_service.service.abstraction.LoanService;
 import rs.banka4.user_service.utils.JwtUtil;
 import rs.banka4.user_service.utils.specification.SpecificationCombinator;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -52,12 +51,11 @@ import java.util.stream.Stream;
 @Service
 @Primary
 public class LoanServiceImpl implements LoanService {
+    private final LoanRateUtil loanRateUtil;
 
     private final ClientService clientService;
 
     private final AccountService accountService;
-
-    private final LoanRateUtil loanRateUtil;
 
     private final LoanRepository loanRepository;
 
