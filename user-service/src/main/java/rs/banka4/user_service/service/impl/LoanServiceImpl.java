@@ -11,7 +11,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import rs.banka4.user_service.domain.currency.mapper.CurrencyMapper;
-import rs.banka4.user_service.domain.loan.db.LoanRequest;
 import rs.banka4.user_service.domain.loan.db.LoanStatus;
 import rs.banka4.user_service.domain.loan.db.Loan;
 import rs.banka4.user_service.domain.account.db.Account;
@@ -25,9 +24,12 @@ import rs.banka4.user_service.domain.loan.mapper.LoanMapper;
 import rs.banka4.user_service.domain.user.client.db.Client;
 import rs.banka4.user_service.exceptions.NullPageRequest;
 import rs.banka4.user_service.exceptions.account.AccountNotActive;
+import rs.banka4.user_service.exceptions.account.NotAccountOwner;
 import rs.banka4.user_service.exceptions.user.client.ClientNotFound;
+import rs.banka4.user_service.repositories.InterestRateRepository;
 import rs.banka4.user_service.service.abstraction.AccountService;
 import rs.banka4.user_service.service.abstraction.ClientService;
+import rs.banka4.user_service.utils.loans.LoanRateScheduler;
 import rs.banka4.user_service.exceptions.jwt.Unauthorized;
 import rs.banka4.user_service.exceptions.loan.InvalidLoanStatus;
 import rs.banka4.user_service.exceptions.loan.LoanNotFound;
@@ -49,6 +51,7 @@ import java.util.stream.Stream;
 @Service
 @Primary
 public class LoanServiceImpl implements LoanService {
+    private final LoanRateUtil loanRateUtil;
 
     private final ClientService clientService;
 
