@@ -59,6 +59,8 @@ public class LoanServiceImpl implements LoanService {
 
     private final LoanRepository loanRepository;
 
+    private final LoanRequestRepository loanRequestRepository;
+
     private final InterestRateRepository interestRateRepository;
 
     private final JwtUtil jwtUtil;
@@ -97,7 +99,6 @@ public class LoanServiceImpl implements LoanService {
             );
         }
     }
-
 
 
     @Override
