@@ -1,36 +1,49 @@
 package rs.banka4.user_service.service.impl;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import rs.banka4.user_service.domain.loan.db.LoanStatus;
 import rs.banka4.user_service.domain.loan.db.Loan;
+import rs.banka4.user_service.domain.account.db.Account;
 import rs.banka4.user_service.domain.loan.dtos.LoanApplicationDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanFilterDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanInformationDto;
+import rs.banka4.user_service.domain.user.client.db.Client;
+import rs.banka4.user_service.exceptions.NullPageRequest;
 import rs.banka4.user_service.repositories.LoanRepository;
+import rs.banka4.user_service.domain.loan.mapper.LoanMapper;
+import rs.banka4.user_service.exceptions.account.AccountNotActive;
+import rs.banka4.user_service.exceptions.account.AccountNotFound;
+import rs.banka4.user_service.exceptions.user.NotFound;
 import rs.banka4.user_service.service.abstraction.AccountService;
+import rs.banka4.user_service.service.abstraction.ClientService;
 import rs.banka4.user_service.exceptions.jwt.Unauthorized;
 import rs.banka4.user_service.exceptions.loan.InvalidLoanStatus;
 import rs.banka4.user_service.exceptions.loan.LoanNotFound;
-import rs.banka4.user_service.domain.loan.mapper.LoanMapper;
 import rs.banka4.user_service.domain.loan.specification.LoanSpecification;
 import rs.banka4.user_service.service.abstraction.LoanService;
 import rs.banka4.user_service.utils.JwtUtil;
+import rs.banka4.user_service.utils.specification.SpecificationCombinator;
+
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
-@Service
 @RequiredArgsConstructor
+@Service
 @Primary
 public class LoanServiceImpl implements LoanService {
+
+    private final ClientService clientService;
 
     private final AccountService accountService;
 
@@ -43,12 +56,12 @@ public class LoanServiceImpl implements LoanService {
     @Override
     public void createLoanApplication(LoanApplicationDto loanApplicationDto, String auth) {
 
-//        String email = jwtUtil.extractUsername(auth);
-//
-//        Optional<Client> client = clientService.getClientByEmail(email);
-//
-//        if(client.isEmpty())
-//            throw new ClientNotFound(email);
+        String email = jwtUtil.extractUsername(auth);
+
+        Optional<Client> client = clientService.getClientByEmail(email);
+
+        if(client.isEmpty())
+            throw new ClientNotFound(email);
 
         Loan newLoan = LoanMapper.INSTANCE.toEntity(loanApplicationDto);
 
@@ -64,9 +77,9 @@ public class LoanServiceImpl implements LoanService {
 
         // TODO: Calculate the monthly installment for the loan
 
-        loanRepository.save(newLoan);
-    }
+        generateLoanNumber(newLoan);
 
+    }
 
 
     @Override
@@ -83,8 +96,39 @@ public class LoanServiceImpl implements LoanService {
 
     @Override
     public ResponseEntity<Page<LoanInformationDto>> getMyLoans(String token, PageRequest pageRequest) {
-        return null;
-        // check out /client/search
+
+        if (pageRequest == null) {
+            throw new NullPageRequest();
+        }
+
+        String username = jwtUtil.extractUsername(token);
+
+        Optional<Client> client = clientService.getClientByEmail(username);
+
+        if(client.isEmpty())
+            throw new ClientNotFound(username);
+
+        Set<AccountDto> accounts = accountService.getAccountsForClient(token);
+
+        Set<String> accountNumbers = accounts.stream().map(AccountDto::accountNumber).collect(Collectors.toSet());
+
+        SpecificationCombinator<Loan> combinator = new SpecificationCombinator<>();
+
+        for(String accountNumber : accountNumbers) {
+            combinator.or(LoanSpecification.hasAccountNumber(accountNumber));
+        }
+
+        Sort sort = Sort.by(Sort.Direction.DESC, "amount");
+
+        PageRequest pageRequestWithSort = PageRequest.of(pageRequest.getPageNumber(),
+                pageRequest.getPageSize(),
+                sort);
+
+        Page<Loan> loansPage = loanRepository.findAll(combinator.build(),pageRequestWithSort);
+
+        Page<LoanInformationDto> loanDtoPage = loansPage.map(LoanMapper.INSTANCE::toDto);
+
+        return ResponseEntity.ok(loanDtoPage);
     }
 
     @Transactional
@@ -132,7 +176,18 @@ public class LoanServiceImpl implements LoanService {
     }
 
     private void connectAccountToLoan(LoanApplicationDto loanApplicationDto, Loan newLoan) {
+        try {
+            Account account =  accountService.getAccountByAccountNumber(loanApplicationDto.accountNumber());
 
+            if(!account.isActive())
+                throw new AccountNotActive();
+
+            newLoan.setAccount(account);
+
+            account.setBalance(account.getBalance().add(newLoan.getAmount()));
+        }catch (NotFound nf){
+            throw new AccountNotFound(loanApplicationDto.accountNumber());
+        }
     }
 
     private void generateAccountNumber(Loan newLoan){
@@ -152,6 +207,8 @@ public class LoanServiceImpl implements LoanService {
                 String loanNumber = String.format("%06d",Integer.parseInt(comb) + random);
 
                 newLoan.setLoanNumber(Long.valueOf(loanNumber));
+
+                loanRepository.save(newLoan);
 
                 break;
             }catch (DataIntegrityViolationException e){
