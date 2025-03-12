@@ -32,4 +32,7 @@ public class LoanSpecification {
             return builder.and(predicates.toArray(new Predicate[0]));
         };
     }
+
+
+
 }
