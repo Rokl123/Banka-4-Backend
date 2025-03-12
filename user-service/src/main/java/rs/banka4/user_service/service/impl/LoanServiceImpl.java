@@ -21,6 +21,7 @@ import rs.banka4.user_service.repositories.LoanRepository;
 import rs.banka4.user_service.domain.loan.mapper.LoanMapper;
 import rs.banka4.user_service.exceptions.account.AccountNotActive;
 import rs.banka4.user_service.exceptions.account.AccountNotFound;
+import rs.banka4.user_service.exceptions.loan.NoLoansOnAccount;
 import rs.banka4.user_service.exceptions.user.NotFound;
 import rs.banka4.user_service.service.abstraction.AccountService;
 import rs.banka4.user_service.service.abstraction.ClientService;
@@ -67,8 +68,6 @@ public class LoanServiceImpl implements LoanService {
 
         newLoan.setStatus(LoanStatus.PROCESSING);
 
-        newLoan.setNextInstallmentDate(LocalDate.now().plusMonths(1));
-
         newLoan.setRemainingDebt(loanApplicationDto.amount());
 
         connectAccountToLoan(loanApplicationDto,newLoan);
@@ -78,7 +77,6 @@ public class LoanServiceImpl implements LoanService {
         // TODO: Calculate the monthly installment for the loan
 
         generateLoanNumber(newLoan);
-
     }
 
 
@@ -109,6 +107,9 @@ public class LoanServiceImpl implements LoanService {
             throw new ClientNotFound(username);
 
         Set<AccountDto> accounts = accountService.getAccountsForClient(token);
+
+        if(accounts.isEmpty())
+            throw new NoLoansOnAccount(username);
 
         Set<String> accountNumbers = accounts.stream().map(AccountDto::accountNumber).collect(Collectors.toSet());
 
