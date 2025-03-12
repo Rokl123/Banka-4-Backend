@@ -1,6 +1,8 @@
 package rs.banka4.user_service.domain.loan.specification;
 
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 import rs.banka4.user_service.domain.account.db.Account;
@@ -11,6 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LoanSpecification {
+
+    @ManyToOne
+    private Account account;
 
     public static Specification<Loan> searchLoans(LoanFilterDto filter) {
         return (root, query, builder) -> {
@@ -33,6 +38,15 @@ public class LoanSpecification {
         };
     }
 
+    public static Specification<Loan> hasAccountNumber(String accountNumber) {
+        return (root, query, criteriaBuilder) -> {
+            Join<Loan, Account> accountJoin = root.join("account", JoinType.INNER);
+            return criteriaBuilder.equal(
+                    criteriaBuilder.lower(accountJoin.get("accountNumber")),
+                    accountNumber
+            );
+        };
+    }
 
 
 }
