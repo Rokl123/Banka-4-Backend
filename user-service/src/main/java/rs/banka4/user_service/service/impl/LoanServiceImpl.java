@@ -47,6 +47,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+
 @RequiredArgsConstructor
 @Service
 @Primary
@@ -98,6 +99,8 @@ public class LoanServiceImpl implements LoanService {
             );
         }
     }
+
+
 
     @Override
     public ResponseEntity<Page<LoanInformationDto>> getAllLoans(PageRequest pageRequest, LoanFilterDto filterDto) {
