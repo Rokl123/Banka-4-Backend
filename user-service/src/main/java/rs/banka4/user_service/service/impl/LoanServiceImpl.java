@@ -5,10 +5,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import rs.banka4.user_service.domain.currency.mapper.CurrencyMapper;
+import rs.banka4.user_service.domain.loan.db.LoanRequest;
 import rs.banka4.user_service.domain.loan.db.LoanStatus;
 import rs.banka4.user_service.domain.loan.db.Loan;
 import rs.banka4.user_service.domain.account.db.Account;
@@ -101,7 +104,9 @@ public class LoanServiceImpl implements LoanService {
 
         Page<Loan> loanPage = loanRepository.findAll(LoanSpecification.searchLoans(filterDto), pageRequest.withSort(sort));
 
-        return ResponseEntity.ok(loanPage.map(LoanMapper.INSTANCE::toDto));
+        return ResponseEntity.ok(loanPage.map(loan ->
+            LoanMapper.INSTANCE.toDto(loan,CurrencyMapper.INSTANCE)
+        ));
     }
 
     @Override
@@ -112,9 +117,7 @@ public class LoanServiceImpl implements LoanService {
         }
 
         String username = jwtUtil.extractUsername(token);
-
         Optional<Client> client = clientService.getClientByEmail(username);
-
         if(client.isEmpty())
             throw new ClientNotFound(username);
 
@@ -132,22 +135,20 @@ public class LoanServiceImpl implements LoanService {
         }
 
         Sort sort = Sort.by(Sort.Direction.DESC, "amount");
-
         PageRequest pageRequestWithSort = PageRequest.of(pageRequest.getPageNumber(),
                 pageRequest.getPageSize(),
                 sort);
 
         Page<Loan> loansPage = loanRepository.findAll(combinator.build(),pageRequestWithSort);
-
         List<Loan> listOfLoans = loansPage.toList();
-
         Stream<Loan> streamOfLoans = listOfLoans.stream().filter(loan -> loan.getStatus() != LoanStatus.PROCESSING);
-
         listOfLoans = streamOfLoans.toList();
-
         loansPage = new PageImpl<>(listOfLoans);
 
-        Page<LoanInformationDto> loanDtoPage = loansPage.map(LoanMapper.INSTANCE::toDto);
+
+        Page<LoanInformationDto> loanDtoPage = loansPage.map(loan ->
+                LoanMapper.INSTANCE.toDto(loan,CurrencyMapper.INSTANCE)
+        );
 
         return ResponseEntity.ok(loanDtoPage);
     }
@@ -222,7 +223,6 @@ public class LoanServiceImpl implements LoanService {
         while(true){
             try{
                 long random = ThreadLocalRandom.current().nextLong(0,100000);
-
                 String loanNumber = String.format("%06d",Integer.parseInt(comb) + random);
 
                 newLoan.setLoanNumber(Long.valueOf(loanNumber));

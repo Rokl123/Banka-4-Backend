@@ -8,6 +8,7 @@ import rs.banka4.user_service.domain.currency.mapper.CurrencyMapper;
 import rs.banka4.user_service.domain.loan.db.Loan;
 import rs.banka4.user_service.domain.loan.db.LoanRequest;
 import rs.banka4.user_service.domain.loan.dtos.LoanApplicationDto;
+import rs.banka4.user_service.domain.loan.dtos.LoanInfoDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanInformationDto;
 import rs.banka4.user_service.domain.user.employee.db.Employee;
 import rs.banka4.user_service.domain.user.employee.dtos.CreateEmployeeDto;
@@ -18,14 +19,15 @@ public interface LoanMapper {
 
     LoanMapper INSTANCE = Mappers.getMapper(LoanMapper.class);
 
-    LoanInformationDto toDto(Loan loan);
+    @Mapping(target = "currency", expression = "java(currencyMapper.toDto(loan.getAccount().getCurrency()))") //OGI N. DOKTOR
+    LoanInformationDto toDto(Loan loan, @Context CurrencyMapper currencyMapper);
 
-//    @AfterMapping
-//    default void mapCurrency(Loan loan, @MappingTarget LoanInformationDto loanInformationDto) {
-//        if (loan.getAccount() != null) {
-//            loanInformationDto.currency() = CurrencyMapper.INSTANCE.toDto(loan.getAccount().getCurrency());
-//        }
-//    }
+    @AfterMapping
+    default void mapCurrency(Loan loan, @MappingTarget LoanInfoDto loanInfoDto) {
+        if (loan.getAccount() != null) {
+            loanInfoDto.setCurrency(CurrencyMapper.INSTANCE.toDto(loan.getAccount().getCurrency()));
+        }
+    }
 
     @Mapping(source = "loanType",target = "type")
     Loan toEntity(LoanApplicationDto loanApplicationDto);

@@ -17,6 +17,7 @@ import rs.banka4.user_service.domain.account.dtos.AccountDto;
 import rs.banka4.user_service.domain.loan.db.Loan;
 import rs.banka4.user_service.domain.loan.dtos.LoanApplicationDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanInformationDto;
+import rs.banka4.user_service.domain.loan.mapper.LoanMapper;
 import rs.banka4.user_service.domain.user.client.db.Client;
 import rs.banka4.user_service.exceptions.NullPageRequest;
 import rs.banka4.user_service.exceptions.loan.NoLoansOnAccount;
@@ -46,6 +47,9 @@ public class ListingLoansTests {
 
     @Mock
     private AccountService accountService;
+
+    @Mock
+    private LoanMapper loanMapper;
 
     @Mock
     private LoanRepository loanRepository;
@@ -88,7 +92,10 @@ public class ListingLoansTests {
         when(accountService.getAccountsForClient(anyString()))
                 .thenReturn(Set.of(accountDto));
 
-        List<Loan> loans = List.of(new Loan());
+        Loan loan = new Loan();
+        loan.setAccount(account);
+
+        List<Loan> loans = List.of(loan);
 
         Page<Loan> loanPage = new PageImpl<>(loans, pageRequest, loans.size());
 

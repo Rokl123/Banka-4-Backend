@@ -91,7 +91,7 @@ public class CreateLoanTests {
         when(clientService.getClientByEmail("test@example.com")).thenReturn(Optional.of(client));
         when(accountService.getAccountByAccountNumber("444394438340549")).thenReturn(account);
         when(loanRepository.save(any(Loan.class))).thenReturn(new Loan());
-        when(interestRateRepository.findByAmountAndDate(BigDecimal.valueOf(1000.0), LocalDate.of(2025,3,13))).thenReturn(Optional.of(new InterestRate()));
+        when(interestRateRepository.findByAmountAndDate(BigDecimal.valueOf(1000.0), LocalDate.now())).thenReturn(Optional.of(new InterestRate()));
 
 
         assertDoesNotThrow(() -> loanService.createLoanApplication(loanApplicationDto, anyString()));
@@ -133,7 +133,7 @@ public class CreateLoanTests {
 
         when(accountService.getAccountByAccountNumber("444394438340549")).thenReturn(account);
 
-        when(interestRateRepository.findByAmountAndDate(BigDecimal.valueOf(1000.0), LocalDate.of(2025,3,13))).thenReturn(Optional.of(new InterestRate()));
+        when(interestRateRepository.findByAmountAndDate(BigDecimal.valueOf(1000.0), LocalDate.now())).thenReturn(Optional.of(new InterestRate()));
 
         assertDoesNotThrow(() -> loanService.createLoanApplication(loanApplicationDto, anyString()));
 
@@ -166,7 +166,7 @@ public class CreateLoanTests {
 
         when(accountService.getAccountByAccountNumber("444394438340549")).thenReturn(account);
 
-        when(interestRateRepository.findByAmountAndDate(BigDecimal.valueOf(1000.0), LocalDate.of(2025,3,13))).thenReturn(Optional.of(new InterestRate()));
+        when(interestRateRepository.findByAmountAndDate(BigDecimal.valueOf(1000.0),LocalDate.now())).thenReturn(Optional.of(new InterestRate()));
 
         Loan loan = new Loan();
         when(loanRepository.save(any(Loan.class))).thenReturn(loan);
@@ -192,7 +192,7 @@ public class CreateLoanTests {
                 .thenThrow(new DataIntegrityViolationException("Duplicate"))
                 .thenReturn(loan);
 
-        when(interestRateRepository.findByAmountAndDate(BigDecimal.valueOf(1000.0), LocalDate.of(2025,3,13))).thenReturn(Optional.of(new InterestRate()));
+        when(interestRateRepository.findByAmountAndDate(BigDecimal.valueOf(1000.0), LocalDate.now())).thenReturn(Optional.of(new InterestRate()));
 
         loan.setLoanNumber(321432L);
 
