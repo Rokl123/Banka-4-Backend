@@ -16,14 +16,12 @@ import rs.banka4.user_service.domain.account.dtos.AccountDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanApplicationDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanFilterDto;
 import rs.banka4.user_service.domain.loan.dtos.LoanInformationDto;
-import rs.banka4.user_service.domain.user.client.db.Client;
-import rs.banka4.user_service.exceptions.NullPageRequest;
 import rs.banka4.user_service.repositories.LoanRepository;
 import rs.banka4.user_service.utils.loans.LoanRateUtil;
 import rs.banka4.user_service.domain.loan.mapper.LoanMapper;
+import rs.banka4.user_service.domain.user.client.db.Client;
+import rs.banka4.user_service.exceptions.NullPageRequest;
 import rs.banka4.user_service.exceptions.account.AccountNotActive;
-import rs.banka4.user_service.exceptions.account.AccountNotFound;
-import rs.banka4.user_service.exceptions.user.NotFound;
 import rs.banka4.user_service.exceptions.user.client.ClientNotFound;
 import rs.banka4.user_service.service.abstraction.AccountService;
 import rs.banka4.user_service.service.abstraction.ClientService;
@@ -35,12 +33,14 @@ import rs.banka4.user_service.service.abstraction.LoanService;
 import rs.banka4.user_service.utils.JwtUtil;
 import rs.banka4.user_service.utils.specification.SpecificationCombinator;
 
-
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RequiredArgsConstructor
 @Service
@@ -52,6 +52,7 @@ public class LoanServiceImpl implements LoanService {
     private final AccountService accountService;
 
     private final LoanRateUtil loanRateUtil;
+
     private final LoanRepository loanRepository;
 
     private final JwtUtil jwtUtil;
@@ -69,18 +70,26 @@ public class LoanServiceImpl implements LoanService {
             throw new ClientNotFound(email);
 
         Loan newLoan = LoanMapper.INSTANCE.toEntity(loanApplicationDto);
-
         newLoan.setStatus(LoanStatus.PROCESSING);
-
         newLoan.setRemainingDebt(loanApplicationDto.amount());
 
-        connectAccountToLoan(loanApplicationDto,newLoan);
+        connectAccountToLoan(loanApplicationDto,newLoan,email);
 
-        generateAccountNumber(newLoan);
-
-        // TODO: Calculate the monthly installment for the loan
+        setLoanInterestRate(newLoan,loanApplicationDto);
 
         generateLoanNumber(newLoan);
+
+        makeLoanRequest(newLoan,loanApplicationDto);
+    }
+
+    private void setLoanInterestRate(Loan newLoan,LoanApplicationDto loanApplicationDto) {
+        if(loanApplicationDto.interestType() == Loan.InterestType.FIXED)
+            newLoan.setBaseInterestRate(interestRateRepository.findByAmountAndDate(newLoan.getAmount(),LocalDate.now()).orElseThrow().getFixedRate());
+        else{
+            newLoan.setBaseInterestRate(
+                    interestRateRepository.findByAmountAndDate(newLoan.getAmount(),LocalDate.now()).orElseThrow().getFixedRate().add(LoanRateScheduler.getInterestRateVariant())
+            );
+        }
     }
 
     @Override
@@ -129,6 +138,14 @@ public class LoanServiceImpl implements LoanService {
                 sort);
 
         Page<Loan> loansPage = loanRepository.findAll(combinator.build(),pageRequestWithSort);
+
+        List<Loan> listOfLoans = loansPage.toList();
+
+        Stream<Loan> streamOfLoans = listOfLoans.stream().filter(loan -> loan.getStatus() != LoanStatus.PROCESSING);
+
+        listOfLoans = streamOfLoans.toList();
+
+        loansPage = new PageImpl<>(listOfLoans);
 
         Page<LoanInformationDto> loanDtoPage = loansPage.map(LoanMapper.INSTANCE::toDto);
 
@@ -179,19 +196,17 @@ public class LoanServiceImpl implements LoanService {
 
     }
 
-    private void connectAccountToLoan(LoanApplicationDto loanApplicationDto, Loan newLoan) {
-        try {
-            Account account =  accountService.getAccountByAccountNumber(loanApplicationDto.accountNumber());
+    private void connectAccountToLoan(LoanApplicationDto loanApplicationDto, Loan newLoan,String clientEmail) {
 
-            if(!account.isActive())
-                throw new AccountNotActive();
+        Account account = accountService.getAccountByAccountNumber(loanApplicationDto.accountNumber());
 
-            newLoan.setAccount(account);
+        if (!account.getClient().getEmail().equals(clientEmail))
+            throw new NotAccountOwner();
 
-            account.setBalance(account.getBalance().add(newLoan.getAmount()));
-        }catch (NotFound nf){
-            throw new AccountNotFound(loanApplicationDto.accountNumber());
-        }
+        if (!account.isActive())
+            throw new AccountNotActive();
+
+        newLoan.setAccount(account);
     }
 
     private void generateLoanNumber(Loan newLoan){
@@ -211,7 +226,6 @@ public class LoanServiceImpl implements LoanService {
                 String loanNumber = String.format("%06d",Integer.parseInt(comb) + random);
 
                 newLoan.setLoanNumber(Long.valueOf(loanNumber));
-
                 loanRepository.save(newLoan);
 
                 break;
@@ -219,5 +233,13 @@ public class LoanServiceImpl implements LoanService {
                 System.out.println("Loan with this loan number already exists!");
             }
         }
+    }
+    private void makeLoanRequest(Loan loan,LoanApplicationDto loanApplicationDto) {
+        LoanRequest loanRequest = LoanMapper.INSTANCE.toLoanRequest(loanApplicationDto);
+        loanRequest.setCurrency(loan.getAccount().getCurrency());
+        loanRequest.setLoan(loan);
+
+        loanRequest.setAccount(loan.getAccount());
+        loanRequestRepository.save(loanRequest);
     }
 }
