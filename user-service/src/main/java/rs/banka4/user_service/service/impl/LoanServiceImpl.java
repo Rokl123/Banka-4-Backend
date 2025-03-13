@@ -38,6 +38,7 @@ import rs.banka4.user_service.service.abstraction.LoanService;
 import rs.banka4.user_service.utils.JwtUtil;
 import rs.banka4.user_service.utils.specification.SpecificationCombinator;
 
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -58,8 +59,6 @@ public class LoanServiceImpl implements LoanService {
     private final AccountService accountService;
 
     private final LoanRepository loanRepository;
-
-    private final LoanRequestRepository loanRequestRepository;
 
     private final InterestRateRepository interestRateRepository;
 
