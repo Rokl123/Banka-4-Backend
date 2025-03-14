@@ -37,8 +37,6 @@ import rs.banka4.user_service.domain.loan.specification.LoanSpecification;
 import rs.banka4.user_service.service.abstraction.LoanService;
 import rs.banka4.user_service.utils.JwtUtil;
 import rs.banka4.user_service.utils.specification.SpecificationCombinator;
-
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -59,6 +57,8 @@ public class LoanServiceImpl implements LoanService {
     private final AccountService accountService;
 
     private final LoanRepository loanRepository;
+
+    private final LoanRequestRepository loanRequestRepository;
 
     private final InterestRateRepository interestRateRepository;
 
@@ -98,6 +98,7 @@ public class LoanServiceImpl implements LoanService {
             );
         }
     }
+
 
 
     @Override
@@ -231,6 +232,7 @@ public class LoanServiceImpl implements LoanService {
                 String loanNumber = String.format("%06d",Integer.parseInt(comb) + random);
 
                 newLoan.setLoanNumber(Long.valueOf(loanNumber));
+
                 loanRepository.save(newLoan);
 
                 break;
