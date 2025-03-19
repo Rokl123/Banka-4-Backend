@@ -1,11 +1,9 @@
 package rs.banka4.user_service.unit.account;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-import java.math.BigDecimal;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,11 +12,9 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.dao.DataIntegrityViolationException;
 import rs.banka4.user_service.domain.account.db.Account;
-import rs.banka4.user_service.domain.account.db.AccountType;
 import rs.banka4.user_service.domain.account.dtos.CreateAccountDto;
 import rs.banka4.user_service.domain.company.db.Company;
 import rs.banka4.user_service.domain.company.dtos.CompanyDto;
-import rs.banka4.user_service.domain.company.mapper.CompanyMapper;
 import rs.banka4.user_service.domain.currency.db.Currency;
 import rs.banka4.user_service.domain.user.client.db.Client;
 import rs.banka4.user_service.domain.user.employee.db.Employee;
