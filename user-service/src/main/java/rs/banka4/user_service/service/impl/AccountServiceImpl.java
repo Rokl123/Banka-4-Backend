@@ -316,7 +316,7 @@ public class AccountServiceImpl implements AccountService {
                         case AccountType.RETIREMENT -> accountNumber+="13";
                         case AccountType.YOUTH -> accountNumber+="14";
                         case AccountType.STUDENT -> accountNumber+="15";
-                        case AccountType.UNEMPLOYED -> accountNumber+="16";
+                        default -> accountNumber+="16";
                     }
                 }else{
                     switch(account.getAccountType()){
@@ -325,6 +325,7 @@ public class AccountServiceImpl implements AccountService {
                     }
                 }
                 account.setAccountNumber(accountNumber);
+
                 account.setActive(true);
                 accountRepository.save(account);
 
