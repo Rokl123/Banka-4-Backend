@@ -120,7 +120,11 @@ public interface CardService {
      * @param pageable Pagination parameters
      * @return Paginated card DTOs wrapped in ResponseEntity
      */
-    ResponseEntity<Page<CardDto>> clientSearchCards(String token, String accountNumber, Pageable pageable);
+    ResponseEntity<Page<CardDto>> clientSearchCards(
+        String token,
+        String accountNumber,
+        Pageable pageable
+    );
 
     /**
      * Employee card search with multiple filters.
